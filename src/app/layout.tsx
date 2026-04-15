@@ -3,9 +3,12 @@ import "./globals.css";
 import { JetBrains_Mono, Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
 
-const geistHeading = Geist({subsets:['latin'],variable:'--font-heading'});
+const geistHeading = Geist({ subsets: ["latin"], variable: "--font-heading" });
 
-const jetbrainsMono = JetBrains_Mono({subsets:['latin'],variable:'--font-mono'});
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
+});
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -18,7 +21,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={cn("font-mono", jetbrainsMono.variable, geistHeading.variable)}>
+    <html
+      lang="en"
+      className={cn(
+        "dark font-mono",
+        jetbrainsMono.variable,
+        geistHeading.variable,
+      )}
+    >
       <body>{children}</body>
     </html>
   );

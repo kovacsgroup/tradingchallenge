@@ -32,7 +32,7 @@ import {
 } from "@/components/ui/table";
 
 const STORAGE_KEY = "compound-calculator";
-const MULTIPLIER_OPTIONS = ["1.25", "1.5", "2", "3"];
+const MULTIPLIER_OPTIONS = ["1.125", "1.25", "1.5", "2", "3"];
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("en-US", {

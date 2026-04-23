@@ -14,11 +14,8 @@ export function Navbar() {
 
   return (
     <header className="border-b border-border bg-background">
-      <nav className="mx-auto flex max-w-2xl items-center gap-6 px-6 py-3 md:px-10">
-        <span className="text-sm font-semibold tracking-tight">
-          Trading Challenge
-        </span>
-        <div className="flex items-center gap-1">
+      <nav className="mx-auto flex items-center justify-center max-w-2xl items-center gap-6 px-6 py-3 md:px-10">
+        <div className="flex items-center gap-1 justify-center">
           {links.map(({ href, label }) => (
             <Link
               key={href}

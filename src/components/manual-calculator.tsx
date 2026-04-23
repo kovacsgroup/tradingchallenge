@@ -66,11 +66,9 @@ export function ManualCalculator() {
     getStored("multiplier", "1.25"),
   );
 
-  function handleChange<T extends string>(
-    setter: (v: T) => void,
-    field: string,
-  ) {
-    return (value: T) => {
+  function handleChange(setter: (v: string) => void, field: string) {
+    return (value: string | null) => {
+      if (value === null) return;
       setter(value);
       try {
         const stored = localStorage.getItem(STORAGE_KEY);

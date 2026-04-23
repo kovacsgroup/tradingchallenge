@@ -3,13 +3,13 @@ import { getFuturesWalletBalance } from "@/lib/mexc";
 import { saveBalance, loadBalance } from "@/lib/balance-store";
 
 export default async function Home() {
-  let initialBalance = 1000;
+  let initialBalance = 100;
   try {
-    const wallet = await getFuturesWalletBalance();
-    saveBalance(wallet.total);
+    const wallet = await getFuturesWalletBalance("USDC");
+    saveBalance("USDC", wallet.total);
     initialBalance = wallet.total;
   } catch {
-    const saved = loadBalance();
+    const saved = loadBalance("USDC");
     if (saved !== null) initialBalance = saved;
   }
 

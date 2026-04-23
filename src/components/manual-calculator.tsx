@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   DollarCircleIcon,
@@ -30,19 +30,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { cn } from "@/lib/utils";
 
-const STORAGE_KEY = "compound-calculator";
+const STORAGE_KEY = "manual-calculator";
 const MULTIPLIER_OPTIONS = ["1.125", "1.25", "1.5", "2", "3"];
-const POLL_INTERVAL_MS = 1000;
-
-type Currency = "USDC" | "USDT";
-
-interface BalanceResponse {
-  balance: number;
-  stale?: boolean;
-  error?: string;
-}
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("en-US", {
@@ -65,69 +55,52 @@ function getStored<T>(field: string, fallback: T): T {
   return fallback;
 }
 
-interface Props {
-  initialBalance: number;
-}
-
-export function CompoundCalculator({ initialBalance }: Props) {
-  const [startBalance, setStartBalance] = useState(initialBalance);
-  const [isStale, setIsStale] = useState(false);
+export function ManualCalculator() {
+  const [startBalance, setStartBalance] = useState(() =>
+    getStored("startBalance", "100"),
+  );
   const [targetBalance, setTargetBalance] = useState(() =>
     getStored("targetBalance", "1000000"),
   );
   const [multiplier, setMultiplier] = useState(() =>
     getStored("multiplier", "1.25"),
   );
-  const [currency, setCurrency] = useState<Currency>(() =>
-    getStored("currency", "USDC"),
-  );
 
-  useEffect(() => {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ targetBalance, multiplier, currency }),
-    );
-  }, [targetBalance, multiplier, currency]);
-
-  useEffect(() => {
-    let active = true;
-
-    async function fetchBalance() {
+  function handleChange<T extends string>(
+    setter: (v: T) => void,
+    field: string,
+  ) {
+    return (value: T) => {
+      setter(value);
       try {
-        const res = await fetch(`/api/balance?currency=${currency}`);
-        if (!res.ok) return;
-        const data: BalanceResponse = await res.json();
-        if (!active) return;
-        setStartBalance(data.balance);
-        setIsStale(data.stale ?? false);
+        const stored = localStorage.getItem(STORAGE_KEY);
+        const parsed = stored ? JSON.parse(stored) : {};
+        localStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify({ ...parsed, [field]: value }),
+        );
       } catch {}
-    }
-
-    fetchBalance();
-    const id = setInterval(fetchBalance, POLL_INTERVAL_MS);
-    return () => {
-      active = false;
-      clearInterval(id);
     };
-  }, [currency]);
+  }
 
   const trades = useMemo(() => {
+    const start = parseFloat(startBalance);
     const target = parseFloat(targetBalance);
     const mult = parseFloat(multiplier);
 
     if (
-      isNaN(startBalance) ||
+      isNaN(start) ||
       isNaN(target) ||
       isNaN(mult) ||
-      startBalance <= 0 ||
-      target <= startBalance ||
+      start <= 0 ||
+      target <= start ||
       mult <= 1
     ) {
       return [];
     }
 
     const rows: { trade: number; balance: number }[] = [];
-    let balance = startBalance;
+    let balance = start;
     let trade = 0;
 
     while (balance < target && trade < 1000) {
@@ -139,41 +112,22 @@ export function CompoundCalculator({ initialBalance }: Props) {
     return rows;
   }, [startBalance, targetBalance, multiplier]);
 
+  const start = parseFloat(startBalance);
+  const target = parseFloat(targetBalance);
+
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <Card>
         <CardHeader>
           <CardTitle>Compound Calculator</CardTitle>
           <CardDescription>
-            Starting balance reflects your live MEXC wallet. Set your target and
-            multiplier.
+            Set your starting balance, target, and multiplier.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-1.5">
-            <label className="flex items-center justify-between text-xs text-muted-foreground">
-              <span className="flex items-center gap-1.5">
-                Starting Balance
-                {isStale && (
-                  <span className="text-yellow-500">(last known)</span>
-                )}
-              </span>
-              <div className="flex overflow-hidden rounded border text-[11px] font-medium">
-                {(["USDC", "USDT"] as Currency[]).map((c) => (
-                  <button
-                    key={c}
-                    onClick={() => setCurrency(c)}
-                    className={cn(
-                      "px-2 py-0.5 transition-colors",
-                      currency === c
-                        ? "bg-primary text-primary-foreground"
-                        : "hover:bg-muted",
-                    )}
-                  >
-                    {c}
-                  </button>
-                ))}
-              </div>
+            <label className="text-xs text-muted-foreground">
+              Starting Balance
             </label>
             <div className="relative">
               <HugeiconsIcon
@@ -183,10 +137,14 @@ export function CompoundCalculator({ initialBalance }: Props) {
               />
               <Input
                 type="number"
-                readOnly
-                tabIndex={-1}
-                value={startBalance.toFixed(2)}
-                className="cursor-default pl-8"
+                min="0"
+                step="any"
+                placeholder="100"
+                value={startBalance}
+                onChange={(e) =>
+                  handleChange(setStartBalance, "startBalance")(e.target.value)
+                }
+                className="pl-8"
               />
             </div>
           </div>
@@ -205,9 +163,13 @@ export function CompoundCalculator({ initialBalance }: Props) {
                 type="number"
                 min="0"
                 step="any"
-                placeholder="10000"
+                placeholder="1000000"
                 value={targetBalance}
-                onChange={(e) => setTargetBalance(e.target.value)}
+                onChange={(e) =>
+                  handleChange(setTargetBalance, "targetBalance")(
+                    e.target.value,
+                  )
+                }
                 className="pl-8"
               />
             </div>
@@ -223,7 +185,7 @@ export function CompoundCalculator({ initialBalance }: Props) {
               />
               <Select
                 value={multiplier}
-                onValueChange={(v) => v !== null && setMultiplier(v)}
+                onValueChange={handleChange(setMultiplier, "multiplier")}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select multiplier" />
@@ -247,8 +209,8 @@ export function CompoundCalculator({ initialBalance }: Props) {
             <CardTitle>Trade Progression</CardTitle>
             <CardDescription>
               {trades.length} trade{trades.length !== 1 ? "s" : ""} to reach{" "}
-              {formatCurrency(parseFloat(targetBalance))} from{" "}
-              {formatCurrency(startBalance)} at {multiplier}x
+              {formatCurrency(target)} from {formatCurrency(start)} at{" "}
+              {multiplier}x
             </CardDescription>
           </CardHeader>
           <CardContent className="p-0">
@@ -277,7 +239,7 @@ export function CompoundCalculator({ initialBalance }: Props) {
       {trades.length === 0 && (
         <Card>
           <CardContent className="py-8 text-center text-muted-foreground">
-            Enter a valid target balance greater than your current balance.
+            Enter a valid target balance greater than your starting balance.
           </CardContent>
         </Card>
       )}

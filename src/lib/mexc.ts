@@ -6,7 +6,7 @@ export interface WalletBalance {
   inPosition: number;
 }
 
-export async function getFuturesWalletBalance(): Promise<WalletBalance> {
+export async function getFuturesWalletBalance(currency: "USDC" | "USDT" = "USDC"): Promise<WalletBalance> {
   const apiKey = process.env.MEXC_API_KEY!;
   const secret = process.env.MEXC_SECRET_KEY!;
   const reqTime = Date.now().toString();
@@ -29,17 +29,17 @@ export async function getFuturesWalletBalance(): Promise<WalletBalance> {
   }
 
   const json = await res.json();
-  const usdc = json.data?.find(
-    (x: { currency: string }) => x.currency === "USDC"
+  const asset = json.data?.find(
+    (x: { currency: string }) => x.currency === currency
   );
 
-  if (!usdc) {
-    throw new Error("USDC not found in MEXC response");
+  if (!asset) {
+    throw new Error(`${currency} not found in MEXC response`);
   }
 
   return {
-    total: parseFloat((usdc.positionMargin + usdc.availableBalance).toFixed(2)),
-    available: usdc.availableBalance as number,
-    inPosition: usdc.positionMargin as number,
+    total: parseFloat((asset.positionMargin + asset.availableBalance).toFixed(2)),
+    available: asset.availableBalance as number,
+    inPosition: asset.positionMargin as number,
   };
 }

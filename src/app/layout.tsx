@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { JetBrains_Mono, Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
+import { Navbar } from "@/components/navbar";
 
 const geistHeading = Geist({ subsets: ["latin"], variable: "--font-heading" });
 
@@ -29,7 +30,10 @@ export default function RootLayout({
         geistHeading.variable,
       )}
     >
-      <body>{children}</body>
+      <body>
+        <Navbar />
+        {children}
+      </body>
     </html>
   );
 }

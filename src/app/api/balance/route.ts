@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { getFuturesWalletBalance } from "@/lib/mexc";
-import { saveBalance, loadBalance } from "@/lib/balance-store";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -9,15 +8,10 @@ export async function GET(request: Request) {
 
   try {
     const wallet = await getFuturesWalletBalance(currency);
-    saveBalance(currency, wallet.total);
-    return NextResponse.json({ balance: wallet.total, stale: false });
+    return NextResponse.json({ balance: wallet.total });
   } catch {
-    const last = loadBalance(currency);
-    if (last !== null) {
-      return NextResponse.json({ balance: last, stale: true });
-    }
     return NextResponse.json(
-      { error: "Unable to fetch balance and no cached balance available" },
+      { error: "Unable to fetch balance" },
       { status: 503 }
     );
   }

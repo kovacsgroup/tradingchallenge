@@ -33,15 +33,35 @@ import {
 import { cn } from "@/lib/utils";
 
 const STORAGE_KEY = "compound-calculator";
+const BALANCE_CACHE_KEY = "balance-cache";
 const MULTIPLIER_OPTIONS = ["1.125", "1.25", "1.5", "2", "3"];
-const POLL_INTERVAL_MS = 1000;
+const POLL_INTERVAL_MS = 500;
 
-type Currency = "USDC" | "USDT";
+type Currency = "USDT" | "USDC";
 
 interface BalanceResponse {
   balance: number;
-  stale?: boolean;
   error?: string;
+}
+
+function getStoredBalance(currency: Currency): number | null {
+  try {
+    const stored = localStorage.getItem(BALANCE_CACHE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (typeof parsed[currency] === "number") return parsed[currency];
+    }
+  } catch {}
+  return null;
+}
+
+function setStoredBalance(currency: Currency, balance: number): void {
+  try {
+    const stored = localStorage.getItem(BALANCE_CACHE_KEY);
+    const parsed = stored ? JSON.parse(stored) : {};
+    parsed[currency] = balance;
+    localStorage.setItem(BALANCE_CACHE_KEY, JSON.stringify(parsed));
+  } catch {}
 }
 
 function formatCurrency(value: number) {
@@ -79,7 +99,7 @@ export function CompoundCalculator({ initialBalance }: Props) {
     getStored("multiplier", "1.25"),
   );
   const [currency, setCurrency] = useState<Currency>(() =>
-    getStored("currency", "USDC"),
+    getStored("currency", "USDT"),
   );
 
   useEffect(() => {
@@ -90,17 +110,28 @@ export function CompoundCalculator({ initialBalance }: Props) {
   }, [targetBalance, multiplier, currency]);
 
   useEffect(() => {
+    const cached = getStoredBalance(currency);
+    if (cached !== null) setStartBalance(cached);
+  }, [currency]);
+
+  useEffect(() => {
     let active = true;
 
     async function fetchBalance() {
       try {
         const res = await fetch(`/api/balance?currency=${currency}`);
-        if (!res.ok) return;
+        if (!res.ok) {
+          setIsStale(true);
+          return;
+        }
         const data: BalanceResponse = await res.json();
         if (!active) return;
         setStartBalance(data.balance);
-        setIsStale(data.stale ?? false);
-      } catch {}
+        setIsStale(false);
+        setStoredBalance(currency, data.balance);
+      } catch {
+        setIsStale(true);
+      }
     }
 
     fetchBalance();
@@ -153,13 +184,13 @@ export function CompoundCalculator({ initialBalance }: Props) {
           <div className="space-y-1.5">
             <label className="flex items-center justify-between text-xs text-muted-foreground">
               <span className="flex items-center gap-1.5">
-                Starting Balance
+                Current Balance
                 {isStale && (
                   <span className="text-yellow-500">(last known)</span>
                 )}
               </span>
               <div className="flex overflow-hidden rounded border text-[11px] font-medium">
-                {(["USDC", "USDT"] as Currency[]).map((c) => (
+                {(["USDT", "USDC"] as Currency[]).map((c) => (
                   <button
                     key={c}
                     onClick={() => setCurrency(c)}
